@@ -33,6 +33,7 @@ def symbolic_diff(f):
 
 def f(x):
 	return x * x
+
 def g(x, y):
 	return x * x + x * y + y
 
