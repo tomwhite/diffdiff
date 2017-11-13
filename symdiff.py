@@ -37,6 +37,11 @@ def f(x):
 def g(x, y):
 	return x * x + x * y + y
 
+from math import tanh
+def h(x):
+	return tanh(x) # this only works because SymPy has a tanh function too; math.tanh(x) fails
+
+
 print(find_arg_names(f))
 print(find_arg_names(g))
 print(find_function_expression(f))
@@ -47,3 +52,6 @@ print(fdash(1))
 
 gdash = symbolic_diff(g)
 print(gdash(1, 3)) # 2*x + y
+
+hdash = symbolic_diff(h)
+print(hdash(1))

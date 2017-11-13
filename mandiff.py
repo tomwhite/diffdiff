@@ -6,3 +6,13 @@ def fdash(x):
 
 print(f(1))
 print(fdash(1))
+
+import math
+def h(x):
+  return math.tanh(x)
+
+def hdash(x):
+  return 1 / (math.cosh(x) * math.cosh(x))
+
+print(h(1))
+print(hdash(1))
