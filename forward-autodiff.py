@@ -47,3 +47,11 @@ hdash = autodiff(h)
 
 print(h(1))
 print(hdash(1))
+
+def c(x):
+  return x * math.tanh(x)
+
+cdash = autodiff(c)
+
+print(c(1))
+print(cdash(1))

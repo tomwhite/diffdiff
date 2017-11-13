@@ -16,3 +16,13 @@ def hdash(x):
 
 print(h(1))
 print(hdash(1))
+
+def c(x):
+	return x * math.tanh(x)
+	
+def cdash(x):
+	return x * hdash(x) + math.tanh(x) # using the product rule
+	
+print(c(1))
+print(cdash(1))
+	

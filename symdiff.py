@@ -41,6 +41,8 @@ from math import tanh
 def h(x):
 	return tanh(x) # this only works because SymPy has a tanh function too; math.tanh(x) fails
 
+def c(x):
+	return x * tanh(x)
 
 print(find_arg_names(f))
 print(find_arg_names(g))
@@ -55,3 +57,6 @@ print(gdash(1, 3)) # 2*x + y
 
 hdash = symbolic_diff(h)
 print(hdash(1))
+
+cdash = symbolic_diff(c)
+print(cdash(1))
