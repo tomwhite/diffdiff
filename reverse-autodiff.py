@@ -79,22 +79,24 @@ def reverse_autodiff(nodes, inputs, outputs):
 	
 	grad_table = {}
 	for n in outputs:
+		n.eval() # forward pass
 		grad_table[n] = 1 # final output has gradient of 1
 
 	def build_grad(v, g, grad_table):
 		if v in grad_table:
 			return grad_table[v]
-		c = g.get_consumers(v)[0] # just one for the moment!
-		d = build_grad(c, g, grad_table)
-		grad_i = sum([grad_op(input.eval()) * d for (grad_op, input) in zip(c.grad_ops, g.get_inputs(c))])
-		grad = grad_i # TODO: sum
+		grad = 0
+		for c in g.get_consumers(v):
+			d = build_grad(c, g, grad_table)
+			grad_i = sum([grad_op(input.eval()) * d for (grad_op, input) in zip(c.grad_ops, g.get_inputs(c))])
+			grad += grad_i
 		grad_table[v] = grad
 		return grad_table[v]
 
 	for v in inputs:
 	  build_grad(v, g, grad_table)
 	
-	return grad_table[inputs[0]] # TODO ?
+	return [grad_table[n] for n in inputs]
 
 # tanh(x)
 n1 = Variable(None, None, None, 1)
