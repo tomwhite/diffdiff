@@ -36,20 +36,20 @@ def h(x):
 #walk(h)
 
 class Variable(object):
-	def __init__(self, parent, op, grad_op, val=None):
-		self.parent = parent
+	def __init__(self, parents, op, grad_ops, val=None):
+		self.parents = parents
 		self.op = op
-		self.grad_op = grad_op
+		self.grad_ops = grad_ops
 		self.val = val
 		
 	def eval(self):
 		if self.op is None:
 			return self.val
 		else:
-			return self.op(self.parent.eval())
+			return self.op(*[p.eval() for p in self.parents])
 		
 	def __repr__(self):
-		return "Variable(parent: %s, op: %s, grad_op: %s, val: %s)" % (self.parent, self.op, self.grad_op, self.val)
+		return "Variable(parents: %s, op: %s, grad_ops: %s, val: %s)" % (self.parents, self.op, self.grad_ops, self.val)
 	
 class Graph(object):
 	def __init__(self, vars):
@@ -59,44 +59,61 @@ class Graph(object):
 		return v.op
 	
 	def get_inputs(self, v):
-		return (v.parent,) # just a single parent for the moment!
+		return v.parents
 	
 	def get_consumers(self, v):
 		children = []
 		for var in self.vars:
-			if var.parent == v:
+			if var.parents != None and v in var.parents:
 				children.append(var)
 		return children
 	
-n1 = Variable(None, None, None, 1)
-n2 = Variable(n1, lambda x: math.tanh(x), lambda x: 1 / (math.cosh(x) * math.cosh(x)))
+def reverse_autodiff(nodes, inputs, outputs):
+	g = Graph(nodes)	
 
-g = Graph([n1, n2])
-
-print("Op of n2:",  g.get_operation(n2))
-print("Inputs to n2:",  g.get_inputs(n2))
-print("Consumers of n1:", g.get_consumers(n1))
-print("n1: ", n1.eval())
-print("n2: ", n2.eval())
+	# print("Op of n2:",  g.get_operation(n2))
+	# print("Inputs to n2:",  g.get_inputs(n2))
+	# print("Consumers of n1:", g.get_consumers(n1))
+	# print("n1: ", n1.eval())
+	# print("n2: ", n2.eval())
 	
-grad_table = {}
-grad_table[n2] = 1 # final output has gradient of 1
+	grad_table = {}
+	for n in outputs:
+		grad_table[n] = 1 # final output has gradient of 1
 
-def build_grad(v, g, grad_table):
-	if v in grad_table:
+	def build_grad(v, g, grad_table):
+		if v in grad_table:
+			return grad_table[v]
+		c = g.get_consumers(v)[0] # just one for the moment!
+		d = build_grad(c, g, grad_table)
+		grad_i = sum([grad_op(input.eval()) * d for (grad_op, input) in zip(c.grad_ops, g.get_inputs(c))])
+		grad = grad_i # TODO: sum
+		grad_table[v] = grad
 		return grad_table[v]
-	c = g.get_consumers(v)[0] # just one for the moment!
-	op = c.op
-	grad_op = c.grad_op
-	d = build_grad(c, g, grad_table)
-	grad_i = grad_op(g.get_inputs(c)[0].eval()) * d
-	grad = grad_i # TODO: sum
-	grad_table[v] = grad
 
-for v in [n1]: # just start with one variable, x
-  build_grad(v, g, grad_table)
+	for v in inputs:
+	  build_grad(v, g, grad_table)
+	
+	return grad_table[inputs[0]] # TODO ?
 
-print(grad_table)
+# tanh(x)
+n1 = Variable(None, None, None, 1)
+n2 = Variable((n1, ), lambda x: math.tanh(x), (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
+
+print(reverse_autodiff((n1, n2), (n1,), (n2,)))
+
+# x * tanh(x)
+n3 = Variable(None, None, None, 1)
+n4 = Variable((n2, n3), lambda x, y: x * y, (lambda x: x, lambda x: x))
+
+print(reverse_autodiff((n1, n2, n3, n4), (n1, n3), (n4,)))
+
+# x * x
+n1 = Variable(None, None, None, 1)
+n2 = Variable(None, None, None, 1)
+n3 = Variable((n1, n2), lambda x, y: x * y, (lambda x: x, lambda x: x))
+
+print(reverse_autodiff((n1, n2, n3), (n1, n2), (n3,)))
 
 
 
