@@ -36,7 +36,8 @@ def h(x):
 #walk(h)
 
 class Variable(object):
-	def __init__(self, parents, op, grad_ops):
+	def __init__(self, name, parents, op, grad_ops):
+		self.name = name
 		self.parents = parents
 		self.op = op
 		self.grad_ops = grad_ops
@@ -51,7 +52,7 @@ class Variable(object):
 		return self.val
 		
 	def __repr__(self):
-		return "Variable(parents: %s, op: %s, grad_ops: %s, val: %s)" % (self.parents, self.op, self.grad_ops, self.val)
+		return "Variable(name: %s, parents: %s, op: %s, grad_ops: %s, val: %s)" % (self.name, self.parents, self.op, self.grad_ops, self.val)
 	
 class Graph(object):
 	def __init__(self, vars):
@@ -105,23 +106,23 @@ def autodiff(nodes, inputs, outputs):
 	return lambda input_values: reverse_autodiff(nodes, inputs, outputs, input_values)
 
 # tanh(x)
-n1 = Variable(None, None, None)
-n2 = Variable((n1, ), lambda x: math.tanh(x), (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
+n1 = Variable("n1", None, None, None)
+n2 = Variable("n2", (n1, ), lambda x: math.tanh(x), (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
 
 fdash = autodiff((n1, n2), (n1,), (n2,))
 print(fdash((1,)))
 
 # x * tanh(x)
-n3 = Variable(None, None, None)
-n4 = Variable((n2, n3), lambda x, y: x * y, (lambda x: x, lambda x: x))
+n3 = Variable("n3", None, None, None)
+n4 = Variable("n4", (n2, n3), lambda x, y: x * y, (lambda x: x, lambda x: x))
 
 fdash = autodiff((n1, n2, n3, n4), (n1, n3), (n4,))
 print(fdash((1, 1)))
 
 # x * x
-n1 = Variable(None, None, None)
-n2 = Variable(None, None, None)
-n3 = Variable((n1, n2), lambda x, y: x * y, (lambda x: x, lambda x: x))
+n1 = Variable("n1", None, None, None)
+n2 = Variable("n2", None, None, None)
+n3 = Variable("n3", (n1, n2), lambda x, y: x * y, (lambda x: x, lambda x: x))
 
 fdash = autodiff((n1, n2, n3), (n1, n2), (n3,))
 print(fdash((1, 1)))
