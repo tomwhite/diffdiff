@@ -23,7 +23,7 @@ def f(x):
     return x * x
 
 
-walk(f)
+#walk(f)
 
 def fdash(x):
     ret = x * x
@@ -43,27 +43,14 @@ print(f(1))
 print(fdash(1))
 
 import math
+from math import tanh
 
 
 def h(x):
-    return math.tanh(x)
+    return tanh(x)
 
 
-# walk(h)
-
-class FuncLister(ast.NodeVisitor):
-    def visit_Return(self, node):
-        print(dir(node))
-        self.generic_visit(node)
-
-src = inspect.getsource(f)
-tree = ast.parse(src)
-FuncLister().visit(tree)
-
-print(extract_return_node_value(f))
-
-for node in ast.walk(extract_return_node_value(f)):
-    print(node)
+#walk(h)
 
 
 class Variable(object):
@@ -172,35 +159,51 @@ print(fdash((1,)))
 
 ####
 
-n0 = Variable("n0", None, None, None)
 
-i = 1
-def gensym():
-    global i
-    sym = "n" + str(i)
-    i += 1
-    return sym
-def consume(node, vars):
-    if isinstance(node, ast.Name):
-        if (node.id == 'x'): # TODO other variables
-            var = Variable(gensym(), (n0,), lambda x: x, (lambda x: 1,))
-            vars.append(var)
-            return var
-    elif isinstance(node, ast.BinOp):
-        if isinstance(node.op, ast.Mult):
-            left = consume(node.left, vars)
-            right = consume(node.right, vars)
-            var = Variable(gensym(), (left, right), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
-            vars.append(var)
-            return var
-    else:
-        print("n: ", node)
+def autodiff2(f):
+    n0 = Variable("n0", None, None, None)
 
-print("---")
-vars = [n0]
-v = consume(extract_return_node_value(f), vars)
-print(v)
-print(vars)
+    def gensym(vars):
+        return "n" + str(len(vars))
 
-fdash = autodiff(vars, (n0,), (v,))
+    def consume(node, vars):
+        if isinstance(node, ast.Name):
+            if (node.id == 'x'): # TODO other variables
+                var = Variable(gensym(vars), (n0,), lambda x: x, (lambda x: 1,))
+                vars.append(var)
+                return var
+        elif isinstance(node, ast.BinOp):
+            if isinstance(node.op, ast.Mult):
+                left = consume(node.left, vars)
+                right = consume(node.right, vars)
+                var = Variable(gensym(vars), (left, right), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
+                vars.append(var)
+                return var
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                if (node.func.id == 'tanh'):
+                    arg = consume(node.args[0], vars) # TODO: what if not single-valued?
+                    var = Variable(gensym(vars), (arg,), lambda x: math.tanh(x),
+                                   (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
+                    vars.append(var)
+                    return var
+        else:
+            print("No match for", node)
+
+    vars = [n0]
+    v = consume(extract_return_node_value(f), vars)
+    return autodiff(vars, (n0,), (v,))
+
+
+fdash = autodiff2(f)
 print(fdash((1,)))
+
+hdash = autodiff2(h)
+print(hdash((1,)))
+
+def c(x):
+    return x * tanh(x)
+
+
+cdash = autodiff2(c)
+print(cdash((1,)))
