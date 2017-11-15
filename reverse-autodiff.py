@@ -1,46 +1,6 @@
-import ast
-import inspect
-
-
-def walk(f):
-    src = inspect.getsource(f)
-    tree = ast.parse(src)
-    for node in ast.walk(tree):
-        print(node)
-    print(ast.dump(tree))
-
-
-def extract_return_node_value(f):
-    src = inspect.getsource(f)
-    tree = ast.parse(src)
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Return):
-            return node.value
-    return None
-
-
 def f(x):
     return x * x
 
-
-#walk(f)
-
-def fdash(x):
-    ret = x * x
-
-    # Backwards
-    df_dn3 = 1.0
-
-    df_dn1 = df_dn3 * x
-    df_dn2 = df_dn3 * x
-
-    df_dx = df_dn1 + df_dn2
-
-    return df_dx
-
-
-print(f(1))
-print(fdash(1))
 
 import math
 from math import tanh
@@ -48,9 +8,6 @@ from math import tanh
 
 def h(x):
     return tanh(x)
-
-
-#walk(h)
 
 
 class Variable(object):
@@ -71,7 +28,7 @@ class Variable(object):
 
     def __repr__(self):
         return "Variable(name: %s, parents: %s, op: %s, grad_ops: %s, val: %s)" % (
-        self.name, self.parents, self.op, self.grad_ops, self.val)
+            self.name, self.parents, self.op, self.grad_ops, self.val)
 
 
 class Graph(object):
@@ -92,20 +49,17 @@ class Graph(object):
         return children
 
 
-def reverse_autodiff(nodes, inputs, outputs, input_values):
+def _reverse_autodiff(nodes, input, output, input_value):
     g = Graph(nodes)
 
     # Forward pass
-    for (var, val) in zip(inputs, input_values):
-        var.set(val)
-    for n in outputs:
-        n.eval()
+    input.set(input_value)
+    output.eval()
 
     # Reverse pass
 
     grad_table = {}
-    for n in outputs:
-        grad_table[n] = 1  # final output has gradient of 1
+    grad_table[output] = 1  # final output has gradient of 1
 
     def build_grad(v, g, grad_table):
         if v in grad_table:
@@ -123,14 +77,13 @@ def reverse_autodiff(nodes, inputs, outputs, input_values):
         # print("grad_table for %s is %s" % (v.name, grad))
         return grad_table[v]
 
-    for v in inputs:
-        build_grad(v, g, grad_table)
+    build_grad(input, g, grad_table)
 
-    return [grad_table[n] for n in inputs]
+    return grad_table[input]
 
 
-def autodiff(nodes, inputs, outputs):
-    return lambda input_values: reverse_autodiff(nodes, inputs, outputs, input_values)
+def _autodiff(nodes, input, output):
+    return lambda input_value: _reverse_autodiff(nodes, input, output, input_value)
 
 
 # tanh(x)
@@ -139,28 +92,40 @@ n1 = Variable("n1", (n0,), lambda x: x, (lambda x: 1,))
 n2 = Variable("n2", (n1,), lambda x: math.tanh(x),
               (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
 
-fdash = autodiff((n1, n2), (n0,), (n2,))
-print(fdash((1,)))
+fdash = _autodiff((n1, n2), n0, n2)
+print(fdash(1))
 
 # x * tanh(x)
 n3 = Variable("n3", (n0,), lambda x: x, (lambda x: 1,))
 n4 = Variable("n4", (n2, n3), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
 
-fdash = autodiff((n0, n1, n2, n3, n4), (n0,), (n4,))
-print(fdash((1,)))
+fdash = _autodiff((n0, n1, n2, n3, n4), n0, n4)
+print(fdash(1))
 
 # x * x
 n1 = Variable("n1", (n0,), lambda x: x, (lambda x: 1,))
 n2 = Variable("n2", (n0,), lambda x: x, (lambda x: 1,))
 n3 = Variable("n3", (n1, n2), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
 
-fdash = autodiff((n1, n2, n3), (n0,), (n3,))
-print(fdash((1,)))
+fdash = _autodiff((n1, n2, n3), n0, n3)
+print(fdash(1))
 
 ####
 
+import ast
+import inspect
 
-def autodiff2(f):
+
+def extract_return_node_value(f):
+    src = inspect.getsource(f)
+    tree = ast.parse(src)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Return):
+            return node.value
+    return None
+
+
+def autodiff(f):
     n0 = Variable("n0", None, None, None)
 
     def gensym(vars):
@@ -168,7 +133,7 @@ def autodiff2(f):
 
     def consume(node, vars):
         if isinstance(node, ast.Name):
-            if (node.id == 'x'): # TODO other variables
+            if (node.id == 'x'):  # TODO other variables
                 var = Variable(gensym(vars), (n0,), lambda x: x, (lambda x: 1,))
                 vars.append(var)
                 return var
@@ -176,13 +141,14 @@ def autodiff2(f):
             if isinstance(node.op, ast.Mult):
                 left = consume(node.left, vars)
                 right = consume(node.right, vars)
-                var = Variable(gensym(vars), (left, right), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
+                var = Variable(gensym(vars), (left, right), lambda x, y: x * y,
+                               (lambda x, y: y, lambda x, y: x))
                 vars.append(var)
                 return var
         elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name):
                 if (node.func.id == 'tanh'):
-                    arg = consume(node.args[0], vars) # TODO: what if not single-valued?
+                    arg = consume(node.args[0], vars)  # TODO: what if not single-valued?
                     var = Variable(gensym(vars), (arg,), lambda x: math.tanh(x),
                                    (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
                     vars.append(var)
@@ -192,18 +158,19 @@ def autodiff2(f):
 
     vars = [n0]
     v = consume(extract_return_node_value(f), vars)
-    return autodiff(vars, (n0,), (v,))
+    return _autodiff(vars, n0, v)
 
 
-fdash = autodiff2(f)
-print(fdash((1,)))
+hdash = autodiff(h)
+print(hdash(1))
 
-hdash = autodiff2(h)
-print(hdash((1,)))
 
 def c(x):
     return x * tanh(x)
 
 
-cdash = autodiff2(c)
-print(cdash((1,)))
+cdash = autodiff(c)
+print(cdash(1))
+
+fdash = autodiff(f)
+print(fdash(1))
