@@ -10,11 +10,20 @@ def walk(f):
     print(ast.dump(tree))
 
 
+def extract_return_node_value(f):
+    src = inspect.getsource(f)
+    tree = ast.parse(src)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Return):
+            return node.value
+    return None
+
+
 def f(x):
     return x * x
 
 
-# walk(f)
+walk(f)
 
 def fdash(x):
     ret = x * x
@@ -41,6 +50,21 @@ def h(x):
 
 
 # walk(h)
+
+class FuncLister(ast.NodeVisitor):
+    def visit_Return(self, node):
+        print(dir(node))
+        self.generic_visit(node)
+
+src = inspect.getsource(f)
+tree = ast.parse(src)
+FuncLister().visit(tree)
+
+print(extract_return_node_value(f))
+
+for node in ast.walk(extract_return_node_value(f)):
+    print(node)
+
 
 class Variable(object):
     def __init__(self, name, parents, op, grad_ops):
@@ -144,4 +168,39 @@ n2 = Variable("n2", (n0,), lambda x: x, (lambda x: 1,))
 n3 = Variable("n3", (n1, n2), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
 
 fdash = autodiff((n1, n2, n3), (n0,), (n3,))
+print(fdash((1,)))
+
+####
+
+n0 = Variable("n0", None, None, None)
+
+i = 1
+def gensym():
+    global i
+    sym = "n" + str(i)
+    i += 1
+    return sym
+def consume(node, vars):
+    if isinstance(node, ast.Name):
+        if (node.id == 'x'): # TODO other variables
+            var = Variable(gensym(), (n0,), lambda x: x, (lambda x: 1,))
+            vars.append(var)
+            return var
+    elif isinstance(node, ast.BinOp):
+        if isinstance(node.op, ast.Mult):
+            left = consume(node.left, vars)
+            right = consume(node.right, vars)
+            var = Variable(gensym(), (left, right), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
+            vars.append(var)
+            return var
+    else:
+        print("n: ", node)
+
+print("---")
+vars = [n0]
+v = consume(extract_return_node_value(f), vars)
+print(v)
+print(vars)
+
+fdash = autodiff(vars, (n0,), (v,))
 print(fdash((1,)))
