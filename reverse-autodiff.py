@@ -125,7 +125,7 @@ def extract_return_node_value(f):
     return None
 
 
-def autodiff(f):
+def reverse_autodiff(f):
     n0 = Variable("n0", None, None, None)
 
     def gensym(vars):
@@ -161,7 +161,7 @@ def autodiff(f):
     return _autodiff(vars, n0, v)
 
 
-hdash = autodiff(h)
+hdash = reverse_autodiff(h)
 print(hdash(1))
 
 
@@ -169,8 +169,8 @@ def c(x):
     return x * tanh(x)
 
 
-cdash = autodiff(c)
+cdash = reverse_autodiff(c)
 print(cdash(1))
 
-fdash = autodiff(f)
+fdash = reverse_autodiff(f)
 print(fdash(1))
