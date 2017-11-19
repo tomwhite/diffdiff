@@ -1,11 +1,14 @@
 # Autodiff
 
+import math
+import unittest
+
 # Use Dual objects to carry the derivative of a function around
 # Simple use of Taylor expansion, dropping terms higher than epsilon:
 # f(a + eps) = f(a) + f'(a) * eps 
 
 class Dual(object):
-    def __init__(self, a, b=1):
+    def __init__(self, a, b=1.0):
         self.a = a
         self.b = b
 
@@ -22,19 +25,8 @@ class Dual(object):
         return "(%s, %s)" % (self.a, self.b)
 
 
-def autodiff(f):
+def forward_autodiff(f):
     return lambda x: f(Dual(x)).diff()
-
-
-def f(x):
-    return x * x
-
-
-fdash = autodiff(f)
-
-print(f(1))
-print(fdash(1))
-
 
 def wrap(method):
     def fn(*args, **kwargs):
@@ -45,29 +37,27 @@ def wrap(method):
 
     return fn
 
-
-import math
-
 math.tanh = wrap(math.tanh)
 
-import math
 
+class TestAutoDiff(unittest.TestCase):
+    def test_forward_autodiff_x_sq(self):
+        def f(x):
+            return x * x
+        self.assertEqual(f(1), 1, 0.001)
+        self.assertEqual(forward_autodiff(f)(1), 2, 0.001)
 
-def h(x):
-    return math.tanh(x)
+    def test_forward_autodiff_tanh(self):
+        def f(x):
+            return math.tanh(x)
+        self.assertEqual(f(1), 0.7615941559557649, 0.001)
+        self.assertEqual(forward_autodiff(f)(1), 0.4199743416140261, 0.001)
 
+    def test_forward_autodiff_x_tanh(self):
+        def f(x):
+            return x * math.tanh(x)
+        self.assertEqual(f(1), 0.7615941559557649, 0.001)
+        self.assertEqual(forward_autodiff(f)(1), 1.1815684975697909, 0.001)
 
-hdash = autodiff(h)
-
-print(h(1))
-print(hdash(1))
-
-
-def c(x):
-    return x * math.tanh(x)
-
-
-cdash = autodiff(c)
-
-print(c(1))
-print(cdash(1))
+if __name__ == '__main__':
+    unittest.main()
