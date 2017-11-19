@@ -1,7 +1,4 @@
-# Autodiff
-
 import math
-import unittest
 
 # Use Dual objects to carry the derivative of a function around
 # Simple use of Taylor expansion, dropping terms higher than epsilon:
@@ -39,25 +36,3 @@ def wrap(method):
 
 math.tanh = wrap(math.tanh)
 
-
-class TestAutoDiff(unittest.TestCase):
-    def test_forward_autodiff_x_sq(self):
-        def f(x):
-            return x * x
-        self.assertEqual(f(1), 1, 0.001)
-        self.assertEqual(forward_autodiff(f)(1), 2, 0.001)
-
-    def test_forward_autodiff_tanh(self):
-        def f(x):
-            return math.tanh(x)
-        self.assertEqual(f(1), 0.7615941559557649, 0.001)
-        self.assertEqual(forward_autodiff(f)(1), 0.4199743416140261, 0.001)
-
-    def test_forward_autodiff_x_tanh(self):
-        def f(x):
-            return x * math.tanh(x)
-        self.assertEqual(f(1), 0.7615941559557649, 0.001)
-        self.assertEqual(forward_autodiff(f)(1), 1.1815684975697909, 0.001)
-
-if __name__ == '__main__':
-    unittest.main()

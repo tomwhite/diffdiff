@@ -93,14 +93,14 @@ n2 = Variable("n2", (n1,), lambda x: math.tanh(x),
               (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
 
 fdash = _autodiff((n1, n2), n0, n2)
-print(fdash(1))
+#print(fdash(1))
 
 # x * tanh(x)
 n3 = Variable("n3", (n0,), lambda x: x, (lambda x: 1,))
 n4 = Variable("n4", (n2, n3), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
 
 fdash = _autodiff((n0, n1, n2, n3, n4), n0, n4)
-print(fdash(1))
+#print(fdash(1))
 
 # x * x
 n1 = Variable("n1", (n0,), lambda x: x, (lambda x: 1,))
@@ -108,7 +108,7 @@ n2 = Variable("n2", (n0,), lambda x: x, (lambda x: 1,))
 n3 = Variable("n3", (n1, n2), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
 
 fdash = _autodiff((n1, n2, n3), n0, n3)
-print(fdash(1))
+#print(fdash(1))
 
 ####
 
@@ -160,17 +160,3 @@ def reverse_autodiff(f):
     v = consume(extract_return_node_value(f), vars)
     return _autodiff(vars, n0, v)
 
-
-hdash = reverse_autodiff(h)
-print(hdash(1))
-
-
-def c(x):
-    return x * tanh(x)
-
-
-cdash = reverse_autodiff(c)
-print(cdash(1))
-
-fdash = reverse_autodiff(f)
-print(fdash(1))
