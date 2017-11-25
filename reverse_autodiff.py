@@ -2,7 +2,7 @@ import ast
 from functools import partial
 import inspect
 import math
-from operator import mul
+from operator import mul, add
 
 
 class Variable(object):
@@ -44,11 +44,12 @@ class Graph(object):
         return children
 
 
-def _reverse_autodiff(nodes, input, output, input_value):
+def _reverse_autodiff(nodes, inputs, output, *input_values):
     g = Graph(nodes)
 
     # Forward pass
-    input.set(input_value)
+    for input, input_value in zip(inputs, input_values):
+        input.set(input_value)
     output.eval()
 
     # Reverse pass
@@ -71,9 +72,10 @@ def _reverse_autodiff(nodes, input, output, input_value):
         # print("grad_table for %s is %s" % (v.name, grad))
         return grad_table[v]
 
-    build_grad(input, g, grad_table)
+    for input in inputs:
+        build_grad(input, g, grad_table)
 
-    return grad_table[input]
+    return grad_table[inputs[0]] # just return first gradient (as we only differentiate wrt first arg for the moment)
 
 
 def _autodiff(nodes, input, output):
@@ -115,6 +117,18 @@ fdash = _autodiff((n1, n2, n3), n0, n3)
 ####
 
 
+def find_arg_names(f):
+    '''Returns a list of argument names for a function.'''
+    src = inspect.getsource(f)
+    tree = ast.parse(src)
+    names = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            for arg in node.args.args:
+                names.append(arg.arg)
+    return names
+
+
 def extract_return_node_value(f):
     src = inspect.getsource(f)
     tree = ast.parse(src)
@@ -132,23 +146,26 @@ def register_reverse_autodiff(function, derivative):
 
 
 def reverse_autodiff(f):
-    n0 = Variable("n0", None, None, None)
-
     def gensym(vars):
         return "n" + str(len(vars))
 
     def consume(node, vars):
         if isinstance(node, ast.Name):
-            if node.id == 'x':  # TODO other variables
-                var = Variable(gensym(vars), (n0,), identity, (const(1),))
+            if node.id in args:
+                var = Variable(gensym(vars), (args[node.id],), identity, (const(1),))
                 vars.append(var)
                 return var
         elif isinstance(node, ast.BinOp):
+            left = consume(node.left, vars)
+            right = consume(node.right, vars)
             if isinstance(node.op, ast.Mult):
-                left = consume(node.left, vars)
-                right = consume(node.right, vars)
                 var = Variable(gensym(vars), (left, right), mul,
                                (lambda x, y: y, lambda x, y: x))
+                vars.append(var)
+                return var
+            elif isinstance(node.op, ast.Add):
+                var = Variable(gensym(vars), (left, right), add,
+                               (lambda x, y: 1, lambda x, y: 1))
                 vars.append(var)
                 return var
         elif isinstance(node, ast.Call):
@@ -162,9 +179,13 @@ def reverse_autodiff(f):
         else:
             print("No match for", node)
 
-    vars = [n0]
+    args = {}
+    for arg_name in find_arg_names(f):
+        arg = Variable(gensym(args), None, None, None)
+        args[arg_name] = arg
+    vars = [arg for arg in args.values()]
     v = consume(extract_return_node_value(f), vars)
-    return _autodiff(vars, n0, v)
+    return _autodiff(vars, [arg for arg in args.values()], v)
 
 
 # Register functions and their derivatives here
