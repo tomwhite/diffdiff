@@ -123,6 +123,13 @@ def extract_return_node_value(f):
     return None
 
 
+derivatives = {}
+
+
+def register_reverse_autodiff(function, derivative):
+    derivatives[function.__name__] = (function, derivative)
+
+
 def reverse_autodiff(f):
     n0 = Variable("n0", None, None, None)
 
@@ -145,10 +152,10 @@ def reverse_autodiff(f):
                 return var
         elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name):
-                if node.func.id == 'tanh':
+                if node.func.id in derivatives:
                     arg = consume(node.args[0], vars)  # TODO: what if not single-valued?
-                    var = Variable(gensym(vars), (arg,), math.tanh,
-                                   (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
+                    function, derivative = derivatives[node.func.id]
+                    var = Variable(gensym(vars), (arg,), function, (derivative,))
                     vars.append(var)
                     return var
         else:
@@ -158,3 +165,7 @@ def reverse_autodiff(f):
     v = consume(extract_return_node_value(f), vars)
     return _autodiff(vars, n0, v)
 
+
+# Register functions and their derivatives here
+register_reverse_autodiff(math.sin, math.cos)
+register_reverse_autodiff(math.tanh, lambda x: 1 / (math.cosh(x) * math.cosh(x)))
