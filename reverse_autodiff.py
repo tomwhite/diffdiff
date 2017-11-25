@@ -1,13 +1,7 @@
-def f(x):
-    return x * x
-
-
+import ast
+import inspect
 import math
-from math import tanh
-
-
-def h(x):
-    return tanh(x)
+from operator import mul
 
 
 class Variable(object):
@@ -86,34 +80,40 @@ def _autodiff(nodes, input, output):
     return lambda input_value: _reverse_autodiff(nodes, input, output, input_value)
 
 
+def identity(x):
+    return x
+
+
+def const(c):
+    return lambda x: c
+
+
 # tanh(x)
 n0 = Variable("n0", None, None, None)
-n1 = Variable("n1", (n0,), lambda x: x, (lambda x: 1,))
-n2 = Variable("n2", (n1,), lambda x: math.tanh(x),
+n1 = Variable("n1", (n0,), identity, (const(1),))
+n2 = Variable("n2", (n1,), math.tanh,
               (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
 
 fdash = _autodiff((n1, n2), n0, n2)
 #print(fdash(1))
 
 # x * tanh(x)
-n3 = Variable("n3", (n0,), lambda x: x, (lambda x: 1,))
-n4 = Variable("n4", (n2, n3), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
+n3 = Variable("n3", (n0,), identity, (const(1),))
+n4 = Variable("n4", (n2, n3), mul, (lambda x, y: y, lambda x, y: x))
 
 fdash = _autodiff((n0, n1, n2, n3, n4), n0, n4)
 #print(fdash(1))
 
 # x * x
-n1 = Variable("n1", (n0,), lambda x: x, (lambda x: 1,))
-n2 = Variable("n2", (n0,), lambda x: x, (lambda x: 1,))
-n3 = Variable("n3", (n1, n2), lambda x, y: x * y, (lambda x, y: y, lambda x, y: x))
+n1 = Variable("n1", (n0,), identity, (const(1),))
+n2 = Variable("n2", (n0,), identity, (const(1),))
+n3 = Variable("n3", (n1, n2), mul, (lambda x, y: y, lambda x, y: x))
 
 fdash = _autodiff((n1, n2, n3), n0, n3)
 #print(fdash(1))
 
 ####
 
-import ast
-import inspect
 
 
 def extract_return_node_value(f):
@@ -134,14 +134,14 @@ def reverse_autodiff(f):
     def consume(node, vars):
         if isinstance(node, ast.Name):
             if (node.id == 'x'):  # TODO other variables
-                var = Variable(gensym(vars), (n0,), lambda x: x, (lambda x: 1,))
+                var = Variable(gensym(vars), (n0,), identity, (const(1),))
                 vars.append(var)
                 return var
         elif isinstance(node, ast.BinOp):
             if isinstance(node.op, ast.Mult):
                 left = consume(node.left, vars)
                 right = consume(node.right, vars)
-                var = Variable(gensym(vars), (left, right), lambda x, y: x * y,
+                var = Variable(gensym(vars), (left, right), mul,
                                (lambda x, y: y, lambda x, y: x))
                 vars.append(var)
                 return var
@@ -149,7 +149,7 @@ def reverse_autodiff(f):
             if isinstance(node.func, ast.Name):
                 if (node.func.id == 'tanh'):
                     arg = consume(node.args[0], vars)  # TODO: what if not single-valued?
-                    var = Variable(gensym(vars), (arg,), lambda x: math.tanh(x),
+                    var = Variable(gensym(vars), (arg,), math.tanh,
                                    (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))
                     vars.append(var)
                     return var
