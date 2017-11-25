@@ -38,7 +38,7 @@ class Graph(object):
     def get_consumers(self, v):
         children = []
         for var in self.vars:
-            if var.parents != None and v in var.parents:
+            if var.parents is not None and v in var.parents:
                 children.append(var)
         return children
 
@@ -52,8 +52,7 @@ def _reverse_autodiff(nodes, input, output, input_value):
 
     # Reverse pass
 
-    grad_table = {}
-    grad_table[output] = 1  # final output has gradient of 1
+    grad_table = {output: 1}  # final output has gradient of 1
 
     def build_grad(v, g, grad_table):
         if v in grad_table:
@@ -115,7 +114,6 @@ fdash = _autodiff((n1, n2, n3), n0, n3)
 ####
 
 
-
 def extract_return_node_value(f):
     src = inspect.getsource(f)
     tree = ast.parse(src)
@@ -133,7 +131,7 @@ def reverse_autodiff(f):
 
     def consume(node, vars):
         if isinstance(node, ast.Name):
-            if (node.id == 'x'):  # TODO other variables
+            if node.id == 'x':  # TODO other variables
                 var = Variable(gensym(vars), (n0,), identity, (const(1),))
                 vars.append(var)
                 return var
@@ -147,7 +145,7 @@ def reverse_autodiff(f):
                 return var
         elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Name):
-                if (node.func.id == 'tanh'):
+                if node.func.id == 'tanh':
                     arg = consume(node.args[0], vars)  # TODO: what if not single-valued?
                     var = Variable(gensym(vars), (arg,), math.tanh,
                                    (lambda x: 1 / (math.cosh(x) * math.cosh(x)),))

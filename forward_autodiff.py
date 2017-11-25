@@ -24,14 +24,23 @@ def forward_autodiff(f):
 
 
 # For a better way, see https://stackoverflow.com/questions/3191799/decorate-a-whole-library-in-python
-def wrap(method):
+def wrap(function):
     def fn(*args, **kwargs):
-        if method.__name__ == 'tanh' and type(args[0]) == Dual:
+        if function in derivatives and type(args[0]) == Dual:
             x = args[0].a
-            return Dual(math.tanh(x), 1 / (math.cosh(x) * math.cosh(x)))  # dual calculus
-        return method(*args, **kwargs)
-
+            return Dual(function(x), derivatives[function](x))
+        return function(*args, **kwargs)
     return fn
 
 
-math.tanh = wrap(math.tanh)
+derivatives = {}
+
+
+def register_forward_autodiff(function, derivative):
+    derivatives[function] = derivative
+    return wrap(function)
+
+
+# Register functions and their derivatives here
+math.sin = register_forward_autodiff(math.sin, math.cos)
+math.tanh = register_forward_autodiff(math.tanh, lambda x: 1 / (math.cosh(x) * math.cosh(x)))
