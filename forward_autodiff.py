@@ -19,7 +19,7 @@ class Dual(object):
         return Dual(self.a * other.a, self.a * other.b + self.b * other.a)
 
     def __repr__(self):
-        return "(%s, %s)" % (self.a, self.b)
+        return "Dual(%r, %r)" % (self.a, self.b)
 
 
 def forward_autodiff(f):

@@ -27,7 +27,7 @@ class Variable(object):
         return self.val
 
     def __repr__(self):
-        return "Variable(name: %s, parents: %s, op: %s, grad_ops: %s, val: %s)" % (
+        return "Variable(%r, %r, %r, %r, %r)" % (
             self.name, self.parents, self.op, self.grad_ops, self.val)
 
 
