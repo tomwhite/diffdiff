@@ -1,3 +1,6 @@
+import math
+
+
 def f(x):
     return x * x
 
@@ -8,8 +11,6 @@ def fdash(x):
 
 print(f(1))
 print(fdash(1))
-
-import math
 
 
 def h(x):

@@ -1,5 +1,6 @@
 from functools import partial
 
+
 def derivative(f, eps, x):
     return (f(x + eps) - f(x)) / eps
 
