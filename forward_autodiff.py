@@ -25,6 +25,8 @@ class Dual(object):
 def forward_autodiff(f):
     return lambda x: f(Dual(x)).diff()
 
+# For a better way, see https://stackoverflow.com/questions/3191799/decorate-a-whole-library-in-python
+
 def wrap(method):
     def fn(*args, **kwargs):
         if (method.__name__ == 'tanh' and type(args[0]) == Dual):
