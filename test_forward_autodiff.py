@@ -23,7 +23,7 @@ class TestAutoDiff(unittest.TestCase):
 
     def test_two_arg_fn(self):
         self.assertEqual(g(1, 3), 7)
-        self.assertEqual(forward_autodiff(g)(1, 3), 5)
+        self.assertEqual(forward_autodiff(g)(1, 3), (5, 2)) # (2x+y, x+1)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,6 @@
+import ast
+from functools import partial
+import inspect
 import math
 
 
@@ -22,13 +25,30 @@ class Dual(object):
         return "Dual(%r, %r)" % (self.a, self.b)
 
 
-def forward_autodiff(f):
-    def autodiff(*args):
-        # find the derivative wrt the first argument (c == 0)
-        duals = tuple(Dual(arg, 1 if c == 0 else 0) for c, arg in enumerate(args))
-        return f(*duals).diff()
-    return autodiff
+def find_arg_names(f):
+    '''Returns a list of argument names for a function.'''
+    src = inspect.getsource(f)
+    tree = ast.parse(src)
+    names = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            for arg in node.args.args:
+                names.append(arg.arg)
+    return names
 
+
+def forward_autodiff(f):
+    def autodiff(arg_index, *args):
+        # find the derivative wrt the given arg_index
+        duals = tuple(Dual(arg, 1 if i == arg_index else 0) for i, arg in enumerate(args))
+        return f(*duals).diff()
+    arg_names = find_arg_names(f)
+    if len(arg_names) == 1:
+        return partial(autodiff, 0)
+    else:
+        def partials(*args):
+            return tuple(partial(autodiff, i)(*args) for i in range(len(args)))
+        return partials
 
 # For a better way, see https://stackoverflow.com/questions/3191799/decorate-a-whole-library-in-python
 def wrap(function):
