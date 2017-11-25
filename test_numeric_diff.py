@@ -17,6 +17,9 @@ class TestAutoDiff(unittest.TestCase):
         self.assertEqual(c(1), 0.7615941559557649)
         self.assertAlmostEqual(numeric_diff(c)(1), 1.1815684975697909, 3)
 
+    def test_two_arg_fn(self):
+        self.assertEqual(g(1, 3), 7)
+        self.assertAlmostEqual(numeric_diff(g)(1, 3), 5.0, 3)
 
 if __name__ == '__main__':
     unittest.main()

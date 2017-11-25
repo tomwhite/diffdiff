@@ -75,7 +75,10 @@ def _reverse_autodiff(nodes, inputs, output, *input_values):
     for input in inputs:
         build_grad(input, g, grad_table)
 
-    return grad_table[inputs[0]] # just return first gradient (as we only differentiate wrt first arg for the moment)
+    if len(inputs) == 1:
+        return grad_table[inputs[0]]
+    else:
+        return tuple(grad_table[input] for input in inputs)
 
 
 def _autodiff(nodes, input, output):
