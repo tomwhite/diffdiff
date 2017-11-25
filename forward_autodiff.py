@@ -15,9 +15,6 @@ class Dual(object):
     def __mul__(self, other):
         return Dual(self.a * other.a, self.a * other.b + self.b * other.a)
 
-    def __rmul__(self, other):
-        return Dual(self.a * other.a, self.a * other.b + self.b * other.a)
-
     def __repr__(self):
         return "Dual(%r, %r)" % (self.a, self.b)
 
