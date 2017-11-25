@@ -21,6 +21,10 @@ class TestAutoDiff(unittest.TestCase):
         self.assertEqual(d(1), 0.8414709848078965)
         self.assertEqual(symbolic_diff(d)(1), 0.5403023058681398)
 
+    def test_two_arg_fn(self):
+        self.assertEqual(g(1, 3), 7)
+        self.assertEqual(symbolic_diff(g)(1, 3), 5)
+
     def test_find_arg_names(self):
         self.assertEqual(find_arg_names(f), ['x'])
 

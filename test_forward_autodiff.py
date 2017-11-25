@@ -21,6 +21,10 @@ class TestAutoDiff(unittest.TestCase):
         self.assertEqual(d(1), 0.8414709848078965)
         self.assertEqual(forward_autodiff(d)(1), 0.5403023058681398)
 
+    def test_two_arg_fn(self):
+        self.assertEqual(g(1, 3), 7)
+        self.assertEqual(forward_autodiff(g)(1, 3), 5)
+
 
 if __name__ == '__main__':
     unittest.main()

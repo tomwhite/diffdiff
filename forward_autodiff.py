@@ -12,6 +12,9 @@ class Dual(object):
     def diff(self):
         return self.b
 
+    def __add__(self, other):
+        return Dual(self.a + other.a, self.b + other.b)
+
     def __mul__(self, other):
         return Dual(self.a * other.a, self.a * other.b + self.b * other.a)
 
@@ -20,7 +23,11 @@ class Dual(object):
 
 
 def forward_autodiff(f):
-    return lambda x: f(Dual(x)).diff()
+    def autodiff(*args):
+        # find the derivative wrt the first argument (c == 0)
+        duals = tuple(Dual(arg, 1 if c == 0 else 0) for c, arg in enumerate(args))
+        return f(*duals).diff()
+    return autodiff
 
 
 # For a better way, see https://stackoverflow.com/questions/3191799/decorate-a-whole-library-in-python
