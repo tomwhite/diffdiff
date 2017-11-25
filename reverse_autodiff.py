@@ -1,4 +1,5 @@
 import ast
+from functools import partial
 import inspect
 import math
 from operator import mul
@@ -76,7 +77,7 @@ def _reverse_autodiff(nodes, input, output, input_value):
 
 
 def _autodiff(nodes, input, output):
-    return lambda input_value: _reverse_autodiff(nodes, input, output, input_value)
+    return partial(_reverse_autodiff, nodes, input, output)
 
 
 def identity(x):
